@@ -1,19 +1,30 @@
 @echo off
-:: Script para copiar a pasta "palavras-cruzadas" e reiniciar o Nginx corretamente
+:: Script para copiar múltiplas pastas e reiniciar o Nginx corretamente
+
+:: Definir IP do seu computador manualmente
+set IP_LOCAL=192.168.208.71
 
 :: Definir variáveis
-set ORIGEM=C:\dev\projects\palavras-cruzadas
-set DESTINO=C:\dev\servers\nginx-1.26.2\html\palavras-cruzadas
+set ORIGEM=C:\dev\projects\landingPage_primeiraEntrega
+set DESTINO=C:\dev\servers\nginx-1.26.2\html
+set DESTINO_REMOTO=\\%IP_LOCAL%\c$\dev\servers\nginx-1.26.2\html
 set NGINX_PATH=C:\dev\servers\nginx-1.26.2
 set NGINX_CONF=C:\dev\servers\nginx-1.26.2\conf\nginx.conf
 
-:: Criar pasta de destino se não existir
-if not exist "%DESTINO%" (
-    mkdir "%DESTINO%"
+:: Criar destino local se não existir
+if not exist "%DESTINO%" mkdir "%DESTINO%"
+
+:: Copiar arquivos para o destino local
+for %%D in (%ORIGEM%) do (
+    echo Copiando de %%D para %DESTINO%...
+    robocopy %%D %DESTINO% /E /MT:8 /R:3 /W:5
 )
 
-:: Copiar a pasta e seus arquivos
-xcopy "%ORIGEM%\*.*" "%DESTINO%" /E /I /Y
+:: Copiar para outro computador na rede (se acessível)
+echo Copiando arquivos para o destino remoto em %DESTINO_REMOTO%...
+for %%D in (%ORIGEM%) do (
+    robocopy %%D %DESTINO_REMOTO% /E /MT:8 /R:3 /W:5
+)
 
 :: Garantir que estamos na pasta correta do Nginx
 cd /d "%NGINX_PATH%"
@@ -25,7 +36,7 @@ if errorlevel 1 (
     nginx.exe -c "%NGINX_CONF%"
 ) else (
     echo Nginx esta rodando. Reiniciando o Nginx...
-
+    
     :: Parar o Nginx corretamente
     nginx.exe -s stop
     timeout /t 2 /nobreak > NUL
